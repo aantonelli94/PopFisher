@@ -2,6 +2,7 @@
 Created on Sat Nov 13 12:50 2021
 
 @author: Andrea Antonelli.
+
 Functions to calculate the population Fisher matrix for a 1-D power-law population model.
 
 """
@@ -13,12 +14,16 @@ import emcee
 import matplotlib as mpl
 import seaborn as sns
 import time
+import pickle
 
 
 from scipy.special import erfc
 from sympy.parsing import mathematica as M
 
 
+# Load Mathematica expressions calculated offline. See notes on how to calculate Fisher matrix.
+with open('Fisher_expressions.pickle', 'rb') as handle:
+        Fisher_expressions = pickle.load(handle)
 
 
 def Dalpha(Nobs,alpha,Mmin,Mmax):
@@ -30,8 +35,10 @@ def Dalpha(Nobs,alpha,Mmin,Mmax):
     It is however a useful function to have for its compactness.
     """
 
+    with open('Fisher_expressions.pickle', 'rb') as handle:
+        b = pickle.load(handle)
 
-    Dalpha_simpified = M.mathematica('Sqrt[1/(Nobs*(alpha^(-2) - (Mmax^alpha*Mmin^alpha*(Log[Mmax] - Log[Mmin])^2)/(Mmax^alpha - Mmin^alpha)^2))]') # from Mathematica notebook.
+    Dalpha_simpified = M.mathematica(Fisher_expressions['Da_no_sel_firstterm']) # from Mathematica notebook.
     out = Dalpha_simpified.subs([('Nobs',Nobs),('alpha',alpha),('Mmax',Mmax),('Mmin',Mmin)]).evalf()
     
     return float(out)
@@ -86,29 +93,43 @@ def pdet_theta(theta_samples,sigma,dth):
 
 
 
-def dpdet_dlambda(theta_samples, Lambda,theta_min,theta_max,NsampsSelFct,var,threshold):     
-    """
-    TO COMMENT. Returns a number.
-    """
-    norm = theta_max**Lambda -theta_min**Lambda
-    num = norm + norm*Lambda*theta_samples - theta_max**Lambda * Lambda * np.log(theta_max) + theta_min**Lambda* Lambda * np.log(theta_min)
-    den = norm * Lambda
+def dpdet_dlambda(theta_samples, Lambda,lowerlimit,upperlimit,NsampsSelFct,var,threshold):     
     
-    arg = pdet_theta(theta_samples,var,threshold) * num/den
+    """
+    Function for the first derivative of the selection function. Returns a number.
+    """
+    
+    arg_der_plambda = M.mathematica(Fisher_expressions['arg_der_plambda'])
+    arg_list=[]
+    
+    for lnM in theta_samples:
+        
+        out = arg_der_plambda.subs([('alpha',Lambda),('Mmax',upperlimit),('Mmin',lowerlimit),('lnM',lnM)]).evalf()
+        arg_list.append(float(out))
+    
+    arg = pdet_theta(theta_samples,var,threshold) * arg_list #set up argument of integral.
     
     return NsampsSelFct**-1*np.sum(arg)  
 
-def ddpdet_ddlambda(theta_samples, Lambda,theta_min,theta_max,NsampsSelFct, var, threshold):  
-    """
-    TO COMMENT. Returns a number.
-    """
-    norm = theta_max**Lambda -theta_min**Lambda
-    num_1 = - norm**2 + theta_max**Lambda * theta_min**Lambda * Lambda**2 * np.log(theta_max)**2 - 2*theta_max**Lambda * theta_min**Lambda * Lambda**2 * np.log(theta_max)*np.log(theta_min) + theta_max**Lambda * theta_min**Lambda * Lambda**2 * np.log(theta_min)**2
-    den_1 = norm**2 * Lambda**2
-    num_2 = norm + norm*Lambda*theta_samples - theta_max**Lambda * Lambda * np.log(theta_max) + theta_min**Lambda* Lambda * np.log(theta_min)
-    den_2 = norm * Lambda
+
+
+def ddpdet_ddlambda(theta_samples, Lambda,lowerlimit,upperlimit,NsampsSelFct,var,threshold):  
     
-    arg = pdet_theta(theta_samples,var,threshold) * (num_1/den_1 + (num_2/den_2)**2)
+    """
+    Function for the second derivative of the selection function. Returns a number.
+    """
+    
+    arg_doubleder_plambda = M.mathematica(Fisher_expressions['arg_doubleder_plambda'])
+
+
+    arg_list=[]
+    
+    for lnM in theta_samples:
+        
+        out = arg_doubleder_plambda.subs([('alpha',Lambda),('Mmax',upperlimit),('Mmin',lowerlimit),('lnM',lnM)]).evalf()
+        arg_list.append(float(out))
+    
+    arg = pdet_theta(theta_samples,var,threshold) * arg_list
     
     return NsampsSelFct**-1*np.sum(arg) 
 
@@ -119,13 +140,13 @@ def FM_1D_powerlaw(theta_samples,Lambda,upperlimit,lowerlimit,var,threshold,Nsam
     
     t0 = time.time()
     
-    # Load analytical expressions for the arguments of the integrals to solve here.
+    # Load analytical expressions for the arguments of the integrals to solve here. See notes for more details.
     
-    GammaI_arg   = M.mathematica('alpha^(-2) + (-derselfct^2 + dderselfct*selfct)/selfct^2 - (Mmax^alpha*Mmin^alpha*(Log[Mmax] - Log[Mmin])^2)/(Mmax^alpha - Mmin^alpha)^2')
-    GammaII_arg  = M.mathematica('(lnM^(-6 + alpha)*(-(lnM^alpha*((2 + 3*(-2 + alpha)*alpha)*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(Mmax^alpha*(Log[lnM] - Log[Mmax]) + Mmin^alpha*(-Log[lnM] + Log[Mmin])))^2) - (lnM^3*(Mmax^alpha - Mmin^alpha - (-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha)*sigma^2)*(6*(-1 + alpha)*(Mmax^alpha - Mmin^alpha)^2 + Mmax^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmax]))*(Log[lnM] - Log[Mmax]) + Mmin^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmin]))*(Log[lnM] - Log[Mmin]) + Mmax^alpha*Mmin^alpha*(-2*(-2 + alpha)*(-1 + alpha)*alpha*Log[lnM]^2 + 4*(Log[Mmax] + Log[Mmin]) + 2*Log[lnM]*(-4 - 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[Mmax] + Log[Mmin])) + (-2 + alpha)*alpha*((-1 + alpha)*Log[Mmax]^2 + Log[Mmax]*(6 - 4*(-1 + alpha)*Log[Mmin]) + Log[Mmin]*(6 + (-1 + alpha)*Log[Mmin])))))/sigma^2))/(2*(Mmax^alpha - Mmin^alpha)^4*(((-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha))/(-Mmax^alpha + Mmin^alpha) + sigma^(-2))^2)')
-    GammaIII_arg = M.mathematica('-1/2*(lnM^(-6 + alpha)*(2*lnM^alpha*((2 + 3*(-2 + alpha)*alpha)*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(Mmax^alpha*(Log[lnM] - Log[Mmax]) + Mmin^alpha*(-Log[lnM] + Log[Mmin])))^2 + (lnM^3*(Mmax^alpha - Mmin^alpha - (-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha)*sigma^2)*(6*(-1 + alpha)*(Mmax^alpha - Mmin^alpha)^2 + Mmax^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmax]))*(Log[lnM] - Log[Mmax]) + Mmin^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmin]))*(Log[lnM] - Log[Mmin]) + Mmax^alpha*Mmin^alpha*(-2*(-2 + alpha)*(-1 + alpha)*alpha*Log[lnM]^2 + 4*(Log[Mmax] + Log[Mmin]) + 2*Log[lnM]*(-4 - 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[Mmax] + Log[Mmin])) + (-2 + alpha)*alpha*((-1 + alpha)*Log[Mmax]^2 + Log[Mmax]*(6 - 4*(-1 + alpha)*Log[Mmin]) + Log[Mmin]*(6 + (-1 + alpha)*Log[Mmin])))))/sigma^2))/((Mmax^alpha - Mmin^alpha)^4*(((-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha))/(-Mmax^alpha + Mmin^alpha) + sigma^(-2))^3*sigma^2)')
-    GammaIV_arg  = M.mathematica('(lnM^(-7 + alpha)*(2*(Mmax^alpha - Mmin^alpha)*(lnM^3*(-Mmax^alpha + Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*lnM^alpha*sigma^2)*((2 + 3*(-2 + alpha)*alpha)*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(Mmax^alpha*(Log[lnM] - Log[Mmax]) + Mmin^alpha*(-Log[lnM] + Log[Mmin]))) + 2*(1 - alpha)*lnM^alpha*sigma^2*((2 + 3*(-2 + alpha)*alpha)*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(Mmax^alpha*(Log[lnM] - Log[Mmax]) + Mmin^alpha*(-Log[lnM] + Log[Mmin])))^2 + (1 - alpha)*lnM^3*(Mmax^alpha - Mmin^alpha - (-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha)*sigma^2)*(6*(-1 + alpha)*(Mmax^alpha - Mmin^alpha)^2 + Mmax^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmax]))*(Log[lnM] - Log[Mmax]) + Mmin^(2*alpha)*(4 + 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[lnM] - Log[Mmin]))*(Log[lnM] - Log[Mmin]) + Mmax^alpha*Mmin^alpha*(-2*(-2 + alpha)*(-1 + alpha)*alpha*Log[lnM]^2 + 4*(Log[Mmax] + Log[Mmin]) + 2*Log[lnM]*(-4 - 6*(-2 + alpha)*alpha + (-2 + alpha)*(-1 + alpha)*alpha*(Log[Mmax] + Log[Mmin])) + (-2 + alpha)*alpha*((-1 + alpha)*Log[Mmax]^2 + Log[Mmax]*(6 - 4*(-1 + alpha)*Log[Mmin]) + Log[Mmin]*(6 + (-1 + alpha)*Log[Mmin]))))))/(E^((dth - lnM)^2/(2*sigma^2))*(Mmax^alpha - Mmin^alpha)^4*Sqrt[2*Pi]*(((-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha))/(-Mmax^alpha + Mmin^alpha) + sigma^(-2))^3*(sigma^2)^(3/2))')
-    GammaV_arg   = M.mathematica('-1/2*(2 + (2*(-1 + alpha)^3*lnM^(-6 + alpha)*sigma^2*(7*lnM^3*(Mmax^alpha - Mmin^alpha) + (-1 + alpha)*(4 + (-2 + alpha)*alpha)*lnM^alpha*sigma^2))/(Mmax^alpha - Mmin^alpha)^2 + ((-1 + alpha)^2*lnM^(-6 + alpha)*sigma^2*((-2 + alpha)*(-1 + alpha)*alpha*(Mmax^alpha - Mmin^alpha)*(lnM^3*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*lnM^alpha*sigma^2)*Log[lnM]^2 + (-2 + alpha)*(-1 + alpha)*alpha*Mmax^alpha*(lnM^3*(Mmax^alpha + Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*lnM^alpha*sigma^2)*Log[Mmax]^2 + 2*Mmax^alpha*Log[Mmax]*(-((2 + 5*(-2 + alpha)*alpha)*lnM^3*(Mmax^alpha - Mmin^alpha)) - (-2 + alpha)*(-1 + alpha)*alpha*(2 + (-2 + alpha)*alpha)*lnM^alpha*sigma^2 - 2*(-2 + alpha)*(-1 + alpha)*alpha*lnM^3*Mmin^alpha*Log[Mmin]) + Mmin^alpha*Log[Mmin]*(2*((2 + 5*(-2 + alpha)*alpha)*lnM^3*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(2 + (-2 + alpha)*alpha)*lnM^alpha*sigma^2) + (-2 + alpha)*(-1 + alpha)*alpha*(lnM^3*(Mmax^alpha + Mmin^alpha) - (-2 + alpha)*(-1 + alpha)*alpha*lnM^alpha*sigma^2)*Log[Mmin]) + 2*Log[lnM]*((Mmax^alpha - Mmin^alpha)*((2 + 5*(-2 + alpha)*alpha)*lnM^3*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*(2 + (-2 + alpha)*alpha)*lnM^alpha*sigma^2) - (-2 + alpha)*(-1 + alpha)*alpha*(lnM^3*(Mmax^alpha - Mmin^alpha) + (-2 + alpha)*(-1 + alpha)*alpha*lnM^alpha*sigma^2)*(Mmax^alpha*Log[Mmax] - Mmin^alpha*Log[Mmin]))))/(Mmax^alpha - Mmin^alpha)^3)/(lnM^2*(((-2 + alpha)*(-1 + alpha)*alpha*lnM^(-3 + alpha))/(-Mmax^alpha + Mmin^alpha) + sigma^(-2))^3*sigma^4)')
+    GammaI_arg   = M.mathematica(Fisher_expressions['A_theta'])
+    GammaII_arg  = M.mathematica(Fisher_expressions['B_theta'])
+    GammaIII_arg = M.mathematica(Fisher_expressions['C_theta'])
+    GammaIV_arg  = M.mathematica(Fisher_expressions['D_theta'])
+    GammaV_arg   = M.mathematica(Fisher_expressions['E_theta'])
 
     substitutions = [('selfct',pdet_lambda(theta_samples,NsampsSelFct,var,threshold)),
                      ('derselfct',dpdet_dlambda(theta_samples,Lambda,lowerlimit,upperlimit, 
