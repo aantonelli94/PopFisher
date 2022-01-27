@@ -119,4 +119,53 @@ def log_likelihood(params, data, hyperprior_min, hyperprior_max, N_samps_selfunc
         return out
     else:
         return -np.inf
+    
+    
+def log_likelihood_nosel(params, data, hyperprior_min, hyperprior_max,  M_max, M_min, sigma, N_det):
+    
+    """
+    Added: Jan 27, 2022.
+    Function for the population log-likelihood in the case without selection effects.
+    
+    Inputs:
+    
+    - params: the parameter to sample through. 
+    - data: the data generated offline.
+    - hyperprior_min and max: the lower and upper limits of the priors of the parameter.
+    - M_max, M_min: the upper and lower limits for the source parameter.
+    - sigma: noise variance assumed in the noise generation (Gaussian) model.
+    - N_det: number of detected events.
+    """
+    
+    # Build up support for posteriors.
+    support = (
+                (params[0] >= hyperprior_min)&
+                (params[0] <= hyperprior_max)
+                )
+    
+    log_likelihood=0
+
+    # Include the selection function.
+    Nsources = N_det
+    
+
+    # Write down the population likelihood here.
+    for i in np.arange(Nsources):
+        
+        ppop_ij = model(data[i,:],params[0],M_max, M_min)           # N_samp-long array for population model.
+        sum_ppop = np.sum(ppop_ij)                                  # Internal sum of population model over N_samp.
+        log_likelihood += np.log(sum_ppop)                     # Add the samples drawn over N_obs in the loop
+                                                                    # and divide by the selection function at each step.
+    
+    
+   
+    #Output without infinities and within the specified hyperpriors (only retain output if supported).
+    out = np.where(support,log_likelihood,-np.inf)  
+    
+    
+    # Force nans away.
+    if np.isfinite(out):
+        return out
+    else:
+        return -np.inf
 
