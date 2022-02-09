@@ -62,11 +62,18 @@ def selection_function(Lambda,number_samples_for_integration,upper_limit,lower_l
     """
     This function is redefined in such a way that the hyperparameter appears as an input.
     It is needed inside the function for the log-likelihood.
+
+    Modified by @Jonathan Gair on Feb 9 2022: now the selection function only draws within 10 sigma of the threshold, 
+    and then weights the result by the fraciton of the population that satisfies that criterion.
+    This is equivalent to setting pdet(theta) identically zero for theta < dth - 10*sigma.
     """
-    
-    theta_ij = log_M(Lambda,number_samples_for_integration,upper_limit,lower_limit)
-    
-    return np.sum(0.5*erfc((threshold-theta_ij)/np.sqrt(2)/noise_var))/number_samples_for_integration
+
+
+    samp_min = np.exp(threshold - 10.0*noise_var)
+    wt = (upper_limit**Lambda - samp_min**Lambda)/(upper_limit**Lambda - lower_limit**Lambda)
+    theta_ij = log_M(Lambda,number_samples_for_integration,upper_limit,samp_min)
+
+    return np.sum(0.5*erfc((threshold-theta_ij)/np.sqrt(2)/noise_var))*wt/number_samples_for_integration
 
 
 
