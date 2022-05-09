@@ -30,7 +30,17 @@ You will have to install the latest versions of `emcee` and `arviz` to run the j
 Here is the citation for `emcee`:
 
 ```yaml
-@article{ForemanMackey:2012ig, author = "Foreman-Mackey, Daniel and Hogg, David W. and Lang, Dustin and Goodman, Jonathan", title = "{emcee: The MCMC Hammer}", eprint = "1202.3665", archivePrefix = "arXiv", primaryClass = "astro-ph.IM", doi = "10.1086/670067", journal = "Publ. Astron. Soc. Pac.", volume = "125", pages = "306--312", year = "2013" }
+@article{ForemanMackey:2012ig, 
+author = "Foreman-Mackey, Daniel and Hogg, David W. and Lang, Dustin and Goodman, Jonathan", 
+title = "{emcee: The MCMC Hammer}", 
+eprint = "1202.3665", 
+archivePrefix = "arXiv", 
+primaryClass = "astro-ph.IM", 
+doi = "10.1086/670067", 
+journal = "Publ. Astron. Soc. Pac.", 
+volume = "125", 
+pages = "306--312", 
+year = "2013" }
 ```
 
 
