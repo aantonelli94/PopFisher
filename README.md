@@ -7,7 +7,7 @@ This paper has been submitted for publication in *MNRAS*.
 
 > We develop a Fisher matrix for population hyperparameters that accounts for source parameter uncertainties and selection effects, and apply it to test cases of increasing complexity. This repository contains an investigation for a toy (Gaussian) model with normally-distributed data and noise, and a more realistic (GW-like) case in which the spectral index of a mass spectrum of black-hole observations is estimated by both Fisher and numerical methods.
 
-![](GW_like_examples/popfish_examples.pdf)
+![Alt text](GW_like_examples/popfish_examples.pdf?raw=true "Title")
 
 *Caption for the example figure with the main results.*
 
