@@ -42,6 +42,22 @@ volume = "125",
 pages = "306--312", 
 year = "2013" }
 ```
+Here is the citation for `arviz`:
+
+```yaml
+@article{arviz_2019,
+    doi = {10.21105/joss.01143},
+    url = {https://doi.org/10.21105/joss.01143},
+    year = {2019},
+    publisher = {The Open Journal},
+    volume = {4},
+    number = {33},
+    pages = {1143},
+    author = {Ravin Kumar and Colin Carroll and Ari Hartikainen and Osvaldo Martin},
+    title = {ArviZ a unified library for exploratory analysis of Bayesian models in Python},
+    journal = {Journal of Open Source Software}
+}
+```
 
 
 ## License
