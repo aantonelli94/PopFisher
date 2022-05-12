@@ -12,4 +12,4 @@ Fig.1 (generated data) is reproduced in the latter notebook.
 
 Fig.2 is a combination of results from both. 
 
-![alt text](fig2.pdf "Title")
+![alt text](fig2.png "Title")
