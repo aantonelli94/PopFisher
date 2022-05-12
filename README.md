@@ -1,4 +1,4 @@
-# \texttt{PopFisher}: a Fisher matrix for gravitational-wave population inference
+# PopFisher: a Fisher matrix for gravitational-wave population inference
 
 by Jonathan Gair, Andrea Antonelli, and Riccardo Barbieri.
 
