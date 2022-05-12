@@ -9,7 +9,4 @@ The `simplified_FM.nb` Mathematica notebook contains analytical estimates for th
 The `Gaussian_toymodel.ipynb` and `Gaussian_toymodel_selection_effects.ipynb` notebooks contain, respectively, the MCMC analsysis without and with selection effects. 
 
 Fig.1 (generated data) is reproduced in the latter notebook. 
-
 Fig.2 is a combination of results from both. 
-
-![alt text](fig2.png "Title")
