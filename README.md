@@ -2,6 +2,7 @@
 
 by Jonathan Gair, Andrea Antonelli, and Riccardo Barbieri.
 
+The codes in this repo support the results of [this paper](https://arxiv.org/abs/2205.07893).
 
 > We develop a Fisher matrix for population hyperparameters that accounts for source parameter uncertainties and selection effects, and apply it to test cases of increasing complexity. This repository contains an investigation for a toy (Gaussian) model with normally-distributed data and noise, and a more realistic (GW-like) case in which the spectral index of a mass spectrum of black-hole observations is estimated by both Fisher and numerical methods.
 
